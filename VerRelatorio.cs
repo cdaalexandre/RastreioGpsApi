@@ -23,37 +23,37 @@ namespace RastreioGpsApi
 
             try
             {
-                // 1. Conecta na tabela "Coordenadas"
                 var connectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
                 var tableClient = new TableClient(connectionString, "Coordenadas");
-
-                // 2. Busca TODOS os registros da tabela.
                 var todosRegistros = tableClient.Query<CoordenadaEntidade>().ToList();
-
-                // 3. Agrupa os registros por funcionário (PartitionKey)
                 var agrupadosPorCelular = todosRegistros
                     .GroupBy(r => r.PartitionKey)
-                    .OrderBy(g => g.Key); // Ordena pelo número do celular
-
+                    .OrderBy(g => g.Key);
                 
-                // NOVO: Pega o fuso horário de Brasília/SP
                 TimeZoneInfo fusoBrasilia = TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time");
-                // NOVO: Calcula a hora atual nesse fuso
                 DateTimeOffset agoraBrasilia = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, fusoBrasilia);
 
-
-                // 4. Constrói o HTML
                 var htmlBuilder = new StringBuilder();
-                htmlBuilder.Append("<html><head><title>Relatório de Localização</title>");
+                htmlBuilder.Append("<html><head><title>Relatório - Atividade de Extensão</title>"); // Título atualizado
                 htmlBuilder.Append("<meta charset='UTF-8'>"); 
                 htmlBuilder.Append("<meta http-equiv='refresh' content='30'>"); 
+                
+                // Estilo do subtítulo adicionado
                 htmlBuilder.Append("<style>body { font-family: sans-serif; } table { border-collapse: collapse; }");
                 htmlBuilder.Append("th, td { border: 1px solid #ddd; padding: 8px; }");
-                htmlBuilder.Append("th { background-color: #f2f2f2; } h2 { color: #333; }</style>");
+                htmlBuilder.Append("th { background-color: #f2f2f2; } h2 { color: #333; }");
+                htmlBuilder.Append(".subtitle { color: #555; font-size: 0.9em; margin-top: -10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }");
+                htmlBuilder.Append("</style>");
+                
                 htmlBuilder.Append("</head><body>");
                 htmlBuilder.Append($"<h1>Relatório de Histórico de Localização</h1>");
-                
-                // ATUALIZADO: Mostra a hora de Brasília
+
+                // TEXTO ADICIONADO AQUI
+                htmlBuilder.Append("<div class='subtitle'>");
+                htmlBuilder.Append("<b>Instituição:</b> Diretoria de ensino centro oeste seduc sp<br>");
+                htmlBuilder.Append("<b>Projeto:</b> Atividades de Extensão: Integração de Competências em Engenharia de Software II - Turma_001");
+                htmlBuilder.Append("</div><br>"); // Adiciona o texto e uma quebra de linha
+
                 htmlBuilder.Append($"<p>Atualizado em: {agoraBrasilia.ToString("dd/MM/yyyy HH:mm:ss")} (Horário de Brasília / Página atualiza a cada 30 segundos)</p>");
 
                 foreach (var grupo in agrupadosPorCelular)
@@ -66,18 +66,14 @@ namespace RastreioGpsApi
                     if (historicoRecente.Any())
                     {
                         htmlBuilder.Append("<h3>Histórico Recente (Últimos 10 registros):</h3>");
-                        // ATUALIZADO: Muda o título da coluna
                         htmlBuilder.Append("<table><tr><th>Horário (Brasília)</th><th>Latitude</th><th>Longitude</th></tr>");
                         
                         foreach (var registro in historicoRecente)
                         {
-                            // ATUALIZADO: Converte a hora de cada registro
                             string horaFormatada = "N/A";
                             if (registro.Timestamp.HasValue)
                             {
-                                // Converte o Timestamp (que é UTC) para o fuso de Brasília
                                 DateTimeOffset horaLocal = TimeZoneInfo.ConvertTime(registro.Timestamp.Value, fusoBrasilia);
-                                // Formata
                                 horaFormatada = horaLocal.ToString("dd/MM/yyyy HH:mm:ss");
                             }
                             htmlBuilder.Append($"<tr><td>{horaFormatada}</td><td>{registro.Latitude}</td><td>{registro.Longitude}</td></tr>");
@@ -93,7 +89,6 @@ namespace RastreioGpsApi
 
                 htmlBuilder.Append("</body></html>");
 
-                // 5. Retorna o HTML
                 return new ContentResult
                 {
                     Content = htmlBuilder.ToString(),
