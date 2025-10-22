@@ -9,7 +9,8 @@ using Newtonsoft.Json;
 using Azure.Data.Tables;
 using System;
 using System.Text.Json;
-using Azure; // Necessário para a resposta da verificação
+using Azure;
+using System.Text; // Para criar nosso HTML de status
 
 namespace RastreioGpsApi
 {
@@ -17,10 +18,33 @@ namespace RastreioGpsApi
     {
         [FunctionName("ReceberCoordenadas")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req,
+            // Adicionamos "get" para o navegador poder acessar
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
             ILogger log)
         {
-            log.LogInformation("C# HTTP trigger function 'ReceberCoordenadas' processou um request.");
+            // Lógica para tratar o GET (navegador)
+            if (req.Method == "GET")
+            {
+                log.LogInformation("C# HTTP trigger 'ReceberCoordenadas' processou um request GET (status page).");
+                var html = new StringBuilder();
+                html.Append("<html><head><title>API de Rastreio</title></head>");
+                html.Append("<body style='font-family: sans-serif; text-align: center; margin-top: 50px;'>");
+                html.Append("<h1>API de Recebimento de Coordenadas</h1>");
+                html.Append("<p style='font-size: 1.2em;'>Esta API está <strong>online e funcionando</strong>.</p>");
+                html.Append("<p>Ela está esperando dados (via POST) do aplicativo de rastreamento.</p>");
+                html.Append("</body></html>");
+
+                return new ContentResult
+                {
+                    Content = html.ToString(),
+                    ContentType = "text/html; charset=utf-8",
+                    StatusCode = 200
+                };
+            }
+
+            // --- Daqui para baixo, é o código original que trata o POST do celular ---
+            
+            log.LogInformation("C# HTTP trigger function 'ReceberCoordenadas' processou um request POST.");
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             
@@ -44,39 +68,28 @@ namespace RastreioGpsApi
 
             try
             {
-                // 3. NOVO: Verificação de Autorização
+                // 3. Verificação de Autorização
                 var connectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
                 var authTableClient = new TableClient(connectionString, "FuncionariosPermitidos");
                 await authTableClient.CreateIfNotExistsAsync();
 
-                // Normaliza o número para usar como chave
                 string celularNormalizado = data.Celular.Replace("+", "");
-
-                // Usamos "FUNCIONARIO" como PartitionKey para manter todos em um grupo
-                // e o número do celular como RowKey.
-                
-                // **** LINHA CORRIGIDA ABAIXO ****
                 Azure.NullableResponse<FuncionarioPermitidoEntidade> authResult = await authTableClient.GetEntityIfExistsAsync<FuncionarioPermitidoEntidade>("FUNCIONARIO", celularNormalizado);
 
                 if (!authResult.HasValue)
                 {
-                    // Se authResult.HasValue é false, o celular NÃO FOI ENCONTRADO
                     log.LogWarning($"Tentativa de envio não autorizada do celular: {data.Celular}");
                     return new ObjectResult("Celular não autorizado.") { StatusCode = StatusCodes.Status403Forbidden };
                 }
 
-                // 4. Prepara a conexão com o Table Storage (se passou na verificação)
+                // 4. Prepara a conexão com o Table Storage
                 var coordTableClient = new TableClient(connectionString, "Coordenadas");
                 
-                // 5. Cria a entidade (a linha da nossa tabela)
+                // 5. Cria a entidade
                 var entidade = new CoordenadaEntidade
                 {
-                    // Chave de Partição: Agrupa por número de celular (ótimo para performance)
                     PartitionKey = celularNormalizado, 
-                    
-                    // Chave de Linha: Um ID único para esta entrada específica.
                     RowKey = (DateTime.MaxValue.Ticks - DateTime.UtcNow.Ticks).ToString("d20"),
-
                     Latitude = data.Latitude,
                     Longitude = data.Longitude,
                     Timestamp = DateTime.UtcNow 
@@ -93,9 +106,11 @@ namespace RastreioGpsApi
                 return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }
         }
-    }
+    } 
 
-    // Classe auxiliar para receber os dados do JSON
+    // ========= IMPORTANTE: ESTAS CLASSES ESTAVAM FALTANDO =========
+    // Elas definem o que é "CoordenadaData", "CoordenadaEntidade", etc.
+
     public class CoordenadaData
     {
         public string Celular { get; set; }
@@ -103,26 +118,21 @@ namespace RastreioGpsApi
         public double Longitude { get; set; }
     }
 
-    // Classe que representa a ESTRUTURA da nossa tabela "Coordenadas"
     public class CoordenadaEntidade : ITableEntity
     {
-        public string PartitionKey { get; set; } // O número do celular
-        public string RowKey { get; set; }       // O ID único (timestamp reverso)
+        public string PartitionKey { get; set; } 
+        public string RowKey { get; set; }       
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public DateTimeOffset? Timestamp { get; set; }
         public Azure.ETag ETag { get; set; }
     }
 
-    // NOVO: Classe que representa a ESTRUTURA da nossa tabela "FuncionariosPermitidos"
     public class FuncionarioPermitidoEntidade : ITableEntity
     {
-        public string PartitionKey { get; set; } // Será "FUNCIONARIO"
-        public string RowKey { get; set; }       // O número do celular
+        public string PartitionKey { get; set; } 
+        public string RowKey { get; set; }       
         public DateTimeOffset? Timestamp { get; set; }
         public Azure.ETag ETag { get; set; }
-
-        // Você pode adicionar mais colunas aqui no futuro (ex: NomeDoFuncionario)
-        // public string Nome { get; set; }
     }
 }

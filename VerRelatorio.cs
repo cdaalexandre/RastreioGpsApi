@@ -35,17 +35,26 @@ namespace RastreioGpsApi
                     .GroupBy(r => r.PartitionKey)
                     .OrderBy(g => g.Key); // Ordena pelo número do celular
 
+                
+                // NOVO: Pega o fuso horário de Brasília/SP
+                TimeZoneInfo fusoBrasilia = TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time");
+                // NOVO: Calcula a hora atual nesse fuso
+                DateTimeOffset agoraBrasilia = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, fusoBrasilia);
+
+
                 // 4. Constrói o HTML
                 var htmlBuilder = new StringBuilder();
                 htmlBuilder.Append("<html><head><title>Relatório de Localização</title>");
-                htmlBuilder.Append("<meta charset='UTF-8'>"); // NOVO: Informa ao HTML que é UTF-8
+                htmlBuilder.Append("<meta charset='UTF-8'>"); 
                 htmlBuilder.Append("<meta http-equiv='refresh' content='30'>"); 
                 htmlBuilder.Append("<style>body { font-family: sans-serif; } table { border-collapse: collapse; }");
                 htmlBuilder.Append("th, td { border: 1px solid #ddd; padding: 8px; }");
                 htmlBuilder.Append("th { background-color: #f2f2f2; } h2 { color: #333; }</style>");
                 htmlBuilder.Append("</head><body>");
                 htmlBuilder.Append($"<h1>Relatório de Histórico de Localização</h1>");
-                htmlBuilder.Append($"<p>Atualizado em: {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss} UTC (Página atualiza a cada 30 segundos)</p>");
+                
+                // ATUALIZADO: Mostra a hora de Brasília
+                htmlBuilder.Append($"<p>Atualizado em: {agoraBrasilia.ToString("dd/MM/yyyy HH:mm:ss")} (Horário de Brasília / Página atualiza a cada 30 segundos)</p>");
 
                 foreach (var grupo in agrupadosPorCelular)
                 {
@@ -57,11 +66,21 @@ namespace RastreioGpsApi
                     if (historicoRecente.Any())
                     {
                         htmlBuilder.Append("<h3>Histórico Recente (Últimos 10 registros):</h3>");
-                        htmlBuilder.Append("<table><tr><th>Horário (UTC)</th><th>Latitude</th><th>Longitude</th></tr>");
+                        // ATUALIZADO: Muda o título da coluna
+                        htmlBuilder.Append("<table><tr><th>Horário (Brasília)</th><th>Latitude</th><th>Longitude</th></tr>");
                         
                         foreach (var registro in historicoRecente)
                         {
-                            htmlBuilder.Append($"<tr><td>{registro.Timestamp?.ToString("dd/MM/yyyy HH:mm:ss")}</td><td>{registro.Latitude}</td><td>{registro.Longitude}</td></tr>");
+                            // ATUALIZADO: Converte a hora de cada registro
+                            string horaFormatada = "N/A";
+                            if (registro.Timestamp.HasValue)
+                            {
+                                // Converte o Timestamp (que é UTC) para o fuso de Brasília
+                                DateTimeOffset horaLocal = TimeZoneInfo.ConvertTime(registro.Timestamp.Value, fusoBrasilia);
+                                // Formata
+                                horaFormatada = horaLocal.ToString("dd/MM/yyyy HH:mm:ss");
+                            }
+                            htmlBuilder.Append($"<tr><td>{horaFormatada}</td><td>{registro.Latitude}</td><td>{registro.Longitude}</td></tr>");
                         }
                         
                         htmlBuilder.Append("</table>");
@@ -78,7 +97,7 @@ namespace RastreioGpsApi
                 return new ContentResult
                 {
                     Content = htmlBuilder.ToString(),
-                    ContentType = "text/html; charset=utf-8", // CORRIGIDO: Informa ao navegador que é UTF-8
+                    ContentType = "text/html; charset=utf-8", 
                     StatusCode = 200
                 };
             }
