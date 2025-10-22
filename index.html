@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rastreamento de Localização</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        #container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        input[type="tel"] { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; font-size: 1.2em; }
+        button { width: 100%; padding: 15px; font-size: 1.1em; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+        #btnIniciar { background-color: #28a745; }
+        #btnParar { background-color: #dc3545; display: none; }
+        #log { margin-top: 20px; font-family: monospace; font-size: 0.9em; height: 150px; overflow-y: scroll; border: 1px solid #ddd; background-color: #fafafa; padding: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <h1>Rastreador de Visitas</h1>
+        <p>Por favor, digite seu número de celular (ex: +5511912345678) e clique em "Iniciar". Mantenha esta página aberta.</p>
+        
+        <input type="tel" id="celular" placeholder="+5511912345678">
+        <button id="btnIniciar" onclick="iniciarRastreio()">Iniciar Rastreamento</button>
+        <button id="btnParar" onclick="pararRastreio()">Parar Rastreamento</button>
+
+        <h3>Log de Atividade:</h3>
+        <div id="log">Aguardando início...</div>
+    </div>
+
+    <script>
+        // A URL da nossa API
+        const API_URL = "https://rastreiogps-app-bba7.azurewebsites.net/api/recebercoordenadas";
+        let intervalId = null; // Variável para controlar o loop de 10 segundos
+        const logEl = document.getElementById('log');
+
+        function logger(mensagem) {
+            console.log(mensagem);
+            logEl.innerHTML = `[${new Date().toLocaleTimeString()}] ${mensagem}<br>` + logEl.innerHTML;
+        }
+
+        function iniciarRastreio() {
+            const celularInput = document.getElementById('celular');
+            const celular = celularInput.value;
+
+            if (!celular || !celular.startsWith('+')) {
+                alert("Por favor, digite um número de celular válido no formato internacional (ex: +5511912345678).");
+                return;
+            }
+
+            logger("Iniciando rastreamento para: " + celular);
+            document.getElementById('btnIniciar').style.display = 'none';
+            document.getElementById('btnParar').style.display = 'block';
+            celularInput.disabled = true;
+
+            // Roda a primeira vez imediatamente
+            enviarLocalizacao();
+
+            // E agenda para rodar a cada 10 segundos
+            intervalId = setInterval(enviarLocalizacao, 10000); 
+        }
+
+        function pararRastreio() {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+                logger("Rastreamento PARADO.");
+                document.getElementById('btnIniciar').style.display = 'block';
+                document.getElementById('btnParar').style.display = 'none';
+                document.getElementById('celular').disabled = false;
+            }
+        }
+
+        function enviarLocalizacao() {
+            const celular = document.getElementById('celular').value;
+
+            if (!navigator.geolocation) {
+                logger("Erro: Navegador não suporta geolocalização.");
+                pararRastreio();
+                return;
+            }
+
+            // 1. Pega a localização do GPS do celular
+            navigator.geolocation.getCurrentPosition(
+                (posicao) => {
+                    logger("Localização obtida: " + posicao.coords.latitude);
+                    
+                    const dados = {
+                        Celular: celular,
+                        Latitude: posicao.coords.latitude,
+                        Longitude: posicao.coords.longitude
+                    };
+
+                    // 2. Envia os dados para a nossa API
+                    fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dados)
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.text();
+                        }
+                        // Se for erro de "Não autorizado"
+                        if (response.status === 403) {
+                            pararRastreio();
+                            throw new Error("Erro 403: Celular não autorizado. Verifique o cadastro.");
+                        }
+                        throw new Error("Erro na API: " + response.status);
+                    })
+                    .then(resultado => {
+                        logger("Sucesso: " + resultado);
+                    })
+                    .catch(erro => {
+                        logger("ERRO: " + erro.message);
+                    });
+                },
+                (erro) => {
+                    logger("ERRO ao obter GPS: " + erro.message);
+                }
+            );
+        }
+    </script>
+</body>
+</html>
