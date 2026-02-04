@@ -50,7 +50,9 @@ namespace RastreioGpsApi
 
                 // TEXTO ADICIONADO AQUI
                 htmlBuilder.Append("<div class='subtitle'>");
+                // htmlBuilder.Append("<b>Instituição:</b> Diretoria de ensino centro oeste seduc sp<br>");
                 htmlBuilder.Append("<b>Instituição:</b> Diretoria de ensino centro oeste seduc sp<br>");
+
                 htmlBuilder.Append("<b>Projeto:</b> Atividades de Extensão: Integração de Competências em Engenharia de Software II - Turma_001");
                 htmlBuilder.Append("</div><br>"); // Adiciona o texto e uma quebra de linha
 
@@ -59,7 +61,7 @@ namespace RastreioGpsApi
                 foreach (var grupo in agrupadosPorCelular)
                 {
                     string celular = grupo.Key;
-                    htmlBuilder.Append($"<h2>Funcionário: {celular}</h2>");
+                    htmlBuilder.Append($"<h2>Colaborador: {celular}</h2>");
                     
                     var historicoRecente = grupo.OrderBy(g => g.RowKey).Take(10);
 
