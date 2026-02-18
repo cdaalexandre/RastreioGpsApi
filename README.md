@@ -1,31 +1,31 @@
-# RastreioGpsApi
+# GPS Tracking API
 
-API para rastreamento de GPS em tempo real.
+A real-time GPS tracking system built with C# .NET and Azure Functions — receives coordinates from devices and generates location reports.
 
-## Descrição
+## Architecture
 
-Sistema desenvolvido em C# .NET para receber e processar coordenadas GPS, gerando relatórios de localização.
+```
+├── ReceberCoordenadas.cs  # Azure Function: receives GPS coordinates
+├── VerRelatorio.cs        # Azure Function: generates tracking reports
+├── index.html             # Web interface for viewing locations
+├── host.json              # Azure Functions configuration
+├── Properties/            # Project settings
+└── RastreioGpsApi.sln     # Visual Studio solution
+```
 
-## Tecnologias
+## Tech Stack
 
-- C# .NET
-- Azure Functions (host.json)
-- Banco de dados para armazenamento
+- **C# .NET** — Core language
+- **Azure Functions** — Serverless compute for receiving and processing GPS data
+- **HTML/JS** — Frontend for report visualization
 
-## Arquivos Principais
+## How It Works
 
-- `ReceberCoordenadas.cs` - Recebe dados de GPS
-- `VerRelatorio.cs` - Gera relatórios de rastreamento
-- `index.html` - Interface web
-- `Anotacoes.txt` - Documentação e notas do projeto
+1. GPS devices send coordinates to the `ReceberCoordenadas` endpoint
+2. Data is stored and processed
+3. `VerRelatorio` generates location tracking reports
+4. Web interface displays device positions and movement history
 
-## Como Usar
+## Author
 
-1. Clone o repositório
-2. Abra `RastreioGpsApi.sln` no Visual Studio
-3. Configure a conexão do banco de dados
-4. Execute o projeto
-
-## Status
-
-Em desenvolvimento.
+**Alexandre Dias-Alves** — Software Engineering student building IoT and cloud-based tracking solutions.
