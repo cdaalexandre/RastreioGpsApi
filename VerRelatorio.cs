@@ -50,10 +50,10 @@ namespace RastreioGpsApi
 
                 // TEXTO ADICIONADO AQUI
                 htmlBuilder.Append("<div class='subtitle'>");
-                // htmlBuilder.Append("<b>Instituição:</b> Diretoria de ensino centro oeste seduc sp<br>");
-                htmlBuilder.Append("<b>Instituição:</b> Diretoria de ensino centro oeste seduc sp<br>");
+                // htmlBuilder.Append("<b>Instituição:</b> Diretoria de Ensino Centro Oeste - SEDUC/SP<br>");
+                htmlBuilder.Append("<b>Instituição:</b> Diretoria de Ensino Centro Oeste - SEDUC/SP<br>");
 
-                htmlBuilder.Append("<b>Projeto:</b> Atividades de Extensão: Integração de Competências em Engenharia de Software II - Turma_001");
+                htmlBuilder.Append("<b>Projeto:</b> Atividade de Extensão: Integração de Competências em Engenharia de Software III - Turma_001");
                 htmlBuilder.Append("</div><br>"); // Adiciona o texto e uma quebra de linha
 
                 htmlBuilder.Append($"<p>Atualizado em: {agoraBrasilia.ToString("dd/MM/yyyy HH:mm:ss")} (Horário de Brasília / Página atualiza a cada 30 segundos)</p>");
