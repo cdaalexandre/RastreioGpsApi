@@ -85,7 +85,7 @@ namespace RastreioGpsApi
                     }
                     else
                     {
-                        htmlBuilder.Append("<p>Nenhum registro encontrado para este funcionário.</p>");
+                        htmlBuilder.Append("<p>Nenhum registro encontrado para este colaborador.</p>");
                     }
                 }
 
