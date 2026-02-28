@@ -5,3 +5,7 @@ obj/
 *.suo
 Anotacoes.txt
 *_export_*.txt
+
+.secrets
+
+local.settings.json
